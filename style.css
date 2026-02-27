@@ -1,0 +1,1663 @@
+/* ==========================================
+   ▼▼▼ 運用担当者向け ガイド ▼▼▼
+   ==========================================
+   【このファイルの構成】
+     1. 基本設定・変数    ← 教科ごとの背景画像はここ
+     2. 演出コンポーネント ← イントロ・タイトル画面
+     3. クイズ・バトル画面 ← バトル中の表示レイアウト
+     4. メニュー・マップ画面 ← マップ画像・教科ボタン
+     5. マップ上の敵キャラ演出
+     6. アニメーション定義
+     7. その他システムUI
+
+   【よく触る設定の場所】
+     - 教科ごとの背景画像 → セクション1 (--stage-bg)
+     - 電光掲示板の速さ   → .marquee-inner (animation 時間)
+     - マップボタンの位置 → .btn-japanese / .btn-social / .btn-math / .btn-science (top / left)
+     - モンスター画像位置 → .monster-japanese などのセクション5
+     - キャラクター位置  → .chara-* のセクション
+
+   【触らないほうがよい設定】
+     - .hidden { display: none !important } ← JSが制御
+     - z-index 関連       ← 表示順序。変えるとUIが重なる
+     - transition / animation ← 演出タイミング。変えると動きがおかしくなる可能性あり
+   ========================================== */
+
+/* ==========================================
+   1. 基本設定・変数
+   ========================================== */
+
+/* ▼ 教科ごとの背景画像変数
+   クイズ中に body に教科クラスが付与され、--stage-bg が切り替わる
+   画像を差し替える場合は url('img/stage/〇〇.jpg') のパスを変更 */
+:root {
+  --stage-bg: url('img/stage/top.png');
+  /* ← デフォルト（メニュー画面背景） */
+}
+
+/* ▼ 各教科のバトル背景画像。画像を差し替える場合は url() のパスを変更 */
+body.japanese {
+  --stage-bg: url('img/stage/japanese.jpg');
+  /* 国語ステージ背景 */
+}
+
+body.math {
+  --stage-bg: url('img/stage/math.jpg');
+  /* 算数ステージ背景 */
+}
+
+body.science {
+  --stage-bg: url('img/stage/science.jpg');
+  /* 理科ステージ背景 */
+}
+
+body.social {
+  --stage-bg: url('img/stage/social.jpg');
+  /* 社会ステージ背景 */
+}
+
+body.apply {
+  --stage-bg: url('img/stage/apply.jpg');
+  /* 総合（最終ボス）ステージ背景 */
+}
+
+/* ▼ 全体の基本スタイル
+   background-color: ゲーム全体の背景色（黒系）。変えたい場合はここ
+   font-family: フォント。変えると全体の文字が変わる */
+body {
+  margin: 0;
+  background-color: #020617;
+  /* ← 全体の背景色（黒系）*/
+  color: #f8fafc;
+  font-family: 'DotGothic16', sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ==========================================
+   2. 演出コンポーネント (イントロ・タイトル)
+   ========================================== */
+#intro-sequence {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: #fff;
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.intro-screen {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.6s ease-in-out;
+}
+
+.splash-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10005;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.splash-content.show,
+.intro-screen.show {
+  opacity: 1 !important;
+}
+
+.splash-content.stay-top {
+  top: 34px !important;
+  transform: translate(-50%, 0) scale(0.35) !important;
+  transform-origin: top center;
+  opacity: 1 !important;
+}
+
+/* クイズ中はタイトル等を隠す */
+#page-quiz:not(.hidden)~.splash-content,
+body:has(#page-quiz:not(.hidden)) .splash-content {
+  display: none !important;
+}
+
+/* ==========================================
+   3. クイズ・バトル画面
+   ========================================== */
+#page-quiz {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background-image: var(--stage-bg);
+  background-size: cover;
+  background-position: center;
+  image-rendering: pixelated;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* ブラウザ拡大時に画面外にはみ出さない */
+}
+
+.battle-arena {
+  flex: 0 0 auto;
+  /* 固定比率やめて内容に合わせる */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  position: relative;
+  z-index: 50;
+}
+
+.sprites-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  width: 100%;
+  flex-grow: 1;
+  height: 30vh;
+  max-height: 300px;
+  min-height: 120px;
+}
+
+.character-sprite {
+  position: relative;
+  height: 85%;
+  width: 45%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.character-sprite img {
+  display: block;
+  height: 100% !important;
+  width: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 15px rgba(0, 0, 0, 0.7));
+}
+
+.character-sprite.player img {
+  height: 65% !important;
+}
+
+/* ===== 最終ボス戦：4人パーティ ===== */
+/* applyモード時はボスを大きく左に、4人を右に小さく */
+body.apply .character-sprite.monster {
+  width: 42%;
+  height: 90%;
+}
+
+body.apply .character-sprite.monster img {
+  height: 100% !important;
+}
+
+.player-party {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 2px;
+  width: 55%;
+  height: 85%;
+}
+
+.party-sprite {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 100%;
+  flex: 1;
+}
+
+.party-sprite img {
+  display: block;
+  height: 50% !important;
+  width: auto;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, 0.7));
+  transition: filter 0.2s ease, opacity 0.3s ease;
+}
+
+.party-sprite.damaged img {
+  filter: drop-shadow(0 0 12px rgba(255, 80, 80, 0.9)) brightness(1.5);
+}
+
+.player-party.hidden {
+  display: none;
+}
+
+/* applyのプログレスドットを大きく目立たせる */
+.step-dot.apply-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+
+/* HP・プログレス */
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  z-index: 60;
+  padding: 5px 0;
+}
+
+.hp-gauge-container {
+  position: relative;
+  width: 100%;
+  height: 18px;
+  display: flex;
+  background: #222;
+  border-top: 2px solid #444;
+  border-bottom: 2px solid #111;
+}
+
+.hp-background {
+  flex: 1;
+  height: 100%;
+  position: relative;
+  background: #222;
+}
+
+/* ▼ 敵のHPゲージの色。background を変えると色が変わる */
+#monster-hp {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: #ff9800;
+  /* ← 敵HPバーの色（オレンジ） */
+  transition: width 0.4s ease;
+}
+
+/* ▼ プレイヤーのHPゲージの色。background を変えると色が変わる */
+#player-hp {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  background: #00fbff;
+  /* ← 味方HPバーの色（水色） */
+  transition: width 0.4s ease;
+}
+
+#quiz-progress {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px 0;
+  width: 100%;
+}
+
+.step-dot {
+  width: 12px;
+  height: 12px;
+  background-color: #444;
+  border: 1px solid #777;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.step-dot.active {
+  background-color: #fff;
+  box-shadow: 0 0 8px #fff;
+  transform: scale(1.1);
+}
+
+.step-dot.cleared {
+  background-color: #ff9800;
+  border-color: #ffb74d;
+  box-shadow: 0 0 5px #ff9800;
+}
+
+/* クイズUI */
+.game-ui {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  z-index: 70;
+  background: rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
+  /* 縦にはみ出したらスクロール */
+  min-height: 0;
+  /* flexバグ回避 */
+  padding: 8px 0;
+  box-sizing: border-box;
+}
+
+/* 1. 基本（国語などのテキスト用） */
+.kanji-window {
+  background: white;
+  border: 4px solid #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 456px;
+  height: 120px;
+  /* 固定の高さ */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+/* 2. 画像モード（理科・社会・算数用） */
+/* JSで kanjiWindow.classList.add('image-mode') された時に適用 */
+.kanji-window.image-mode {
+  height: auto;
+  min-height: 80px;
+  max-height: min(40vh, 260px);
+  /* 拡大時に大きくなりすぎない */
+  padding: 0px;
+}
+
+/* 3. 中身の画像自体の設定 */
+#main-kanji img {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  /* 枠内に収める */
+}
+
+.problem-window {
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 458px;
+  padding: 10px 14px;
+  text-align: center;
+  margin-bottom: 8px;
+  color: white;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.command-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 90%;
+  max-width: 460px;
+}
+
+/* ==========================================
+   4. メニュー・マップ画面
+   ========================================== */
+#page-menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 80;
+}
+
+.menu-visual {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#menu-main-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ==========================================
+   バトルアリア・プログレスドット
+   ========================================== */
+.battle-arena {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  height: 300px;
+}
+
+
+.status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-bottom: 0;
+}
+
+#quiz-progress {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  width: 100%;
+}
+
+.step-dot {
+  width: 12px;
+  height: 12px;
+  background-color: #444;
+  border: 1px solid #777;
+  border-radius: 2px;
+}
+
+.step-dot.active {
+  background-color: #fff;
+  box-shadow: 0 0 8px #fff;
+}
+
+.step-dot.cleared {
+  background-color: #ff9800;
+  border-color: #ffb74d;
+  box-shadow: 0 0 5px #ff9800;
+}
+
+/* ==========================================
+   カルーセル：TENSAIロゴの左右隣に絶対配置
+   ========================================== */
+.carousel-box {
+  position: absolute;
+  top: 30px;
+  width: 180px;
+  height: 180px;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 14px rgba(0, 200, 255, 0.5);
+  z-index: 200;
+  pointer-events: none;
+}
+
+#monster-carousel {
+  left: calc(50% - 380px);
+}
+
+#player-carousel {
+  right: calc(50% - 380px);
+}
+
+.carousel-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s ease-in-out;
+  flex-wrap: nowrap;
+  /* ← 追加：折り返し禁止 */
+}
+
+/* ▼ クイズ画面上部に表示される教科名ラベルの共通スタイル
+   位置を変えたい場合は top / left を調整（transform と連動） */
+/* クイズ中だけ表示するためのクラス（JSで切り替え） */
+/* クイズ画面の教科の名前の配置図 */
+/* 基本スタイル（共通） */
+#quiz-subject-display {
+  position: fixed;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  padding: 5px 30px;
+  border-radius: 5px;
+  /* 少し角ばらせて額縁風に */
+  font-size: 1.4rem;
+  font-weight: bold;
+  pointer-events: none;
+  display: none;
+  border: 3px solid #333;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* active時の表示 */
+#quiz-subject-display.active {
+  display: block;
+}
+
+/* --- 教科別デザイン ---
+   ▼ 各教科の教科名ラベルの背景色・文字色・枠線を変えたい場合はここを編集 */
+
+/* 国語：和紙風の配色 */
+body.japanese #quiz-subject-display {
+  background: #fcfaf2;
+  /* 和紙っぽい色 */
+  /* オレンジ系 */
+  color: #e65100;
+  border: 4px solid #f77b7b;
+  /* 茶色の額縁 */
+
+  font-family: 'DotGothic16', sans-serif;
+  font-weight: 500;
+  font-size: 1.8rem;
+  /* 少し大きく */
+}
+
+/* 社会：地図や歴史のイメージ */
+body.social #quiz-subject-display {
+  background: #e1f5fe;
+  /* オレンジ系 */
+  color: #e65100;
+  border: 4px solid #ff9800;
+  font-family: 'DotGothic16', sans-serif;
+  font-weight: 500;
+  font-size: 1.8rem;
+}
+
+/* 理科：フラスコや自然のイメージ */
+body.science #quiz-subject-display {
+  background: #e8f5e9;
+  /* 水色系 */
+  color: #01579b;
+  border: 4px solid #0288d1;
+  font-family: 'DotGothic16', sans-serif;
+  font-weight: 500;
+  font-size: 1.8rem;
+}
+
+/* 算数：デジタル・計算機イメージ */
+body.math #quiz-subject-display {
+  background: #fff3e0;
+  /* 薄緑 */
+  color: #2e7d32;
+  border: 4px solid #4caf50;
+  font-family: 'DotGothic16', sans-serif;
+  font-weight: 500;
+  font-size: 1.8rem;
+}
+
+/* 応用（総合）：特別な金色イメージ */
+body.apply #quiz-subject-display {
+  background: #fffde7;
+  color: #0025f1;
+  border: 4px solid #4361e9;
+  font-family: 'DotGothic16', sans-serif;
+  font-weight: 500;
+  font-size: 1.8rem;
+  /* 光らせる */
+}
+
+/* 敵キャラ：横広め画像なのでcoverで全体を埋める */
+#monster-carousel .carousel-track img {
+  min-width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+  image-rendering: pixelated;
+  box-sizing: border-box;
+}
+
+/* 主人公：縦長全身画像なのでcontainで余白付き表示 */
+#player-carousel .carousel-track img {
+  min-width: 100%;
+  width: 100%;
+  /* ← 追加 */
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  /* ← top → center に変更 */
+  image-rendering: pixelated;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  /* ← 追加：縮まないように固定 */
+}
+
+/* ==========================================
+   電光掲示板：2スパンでシームレスループ
+   ========================================== */
+.marquee-bar {
+  position: absolute;
+  top: 240px;
+  left: 0;
+  width: 100%;
+  background: #000;
+  border-top: 2px solid rgb(255, 255, 255);
+  border-bottom: 2px solid rgb(255, 255, 255);
+  overflow: hidden;
+  padding: 4px 0;
+  z-index: 200;
+}
+
+/* ▼ 電光掲示板のスクロール速度
+   animation-duration の数値（14s）を小さくすると速くなり、大きくするとゆっくりになる */
+.marquee-inner {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: marquee-scroll 14s linear infinite;
+  /* ← 14s = 14秒で1ループ。速度変更はここ */
+}
+
+.marquee-inner span {
+  font-family: 'DotGothic16', sans-serif;
+  font-size: 2rem;
+  /* ← 電光掲示板の文字サイズ。変えたい場合はここ */
+  color: rgb(255, 255, 255);
+  padding-right: 60px;
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* ==========================================
+   マップボタン共通スタイル
+   ▼ ボタンのサイズ・フォントを変える場合は .map-btn を編集
+   ▼ 個別の位置・色は .btn-japanese / .btn-social / .btn-math / .btn-science で設定
+   ========================================== */
+/* マップボタン共通 */
+.map-btn {
+  position: absolute;
+  z-index: 100;
+  padding: 8px 14px;
+  font-family: 'DotGothic16', sans-serif;
+  font-size: 2rem;
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  border-radius: 8px;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ==========================================
+   ボタン別配置・色
+   ▼ top / left でマップ上の位置を調整（単位は % でマップ画像に対する相対位置）
+   ▼ background でボタンの色を変更可能
+   ▼ animation で使われているアニメーション名は セクション6で定義
+   ========================================== */
+
+/* ▼ 国語ボタン */
+.btn-japanese {
+  top: 60%;
+  /* ← 縦位置（大きくすると下に移動） */
+  left: 22%;
+  /* ← 横位置（大きくすると右に移動） */
+  background: #d32f2f;
+  /* ← ボタン背景色（赤） */
+  color: white;
+  border: 3px solid #7b1a1a;
+  box-shadow: 0 4px 0 #7b1a1a;
+  animation: pulse-japanese 2s infinite;
+}
+
+.btn-japanese:hover {
+  background: #ff5252;
+  animation: shake-math 0.2s infinite;
+}
+
+/* ▼ 社会ボタン */
+.btn-social {
+  top: 60%;
+  /* ← 縦位置 */
+  left: 78%;
+  /* ← 横位置 */
+  background: #e65100;
+  /* ← ボタン背景色（オレンジ） */
+  color: white;
+  border: 3px solid #822c00;
+  box-shadow: 4px 4px 0 #822c00;
+  animation: dot-jump 2s steps(6) infinite;
+}
+
+.btn-social:hover {
+  background: #ff8340;
+  animation: shake-math 0.2s infinite;
+}
+
+/* ▼ 理科ボタン */
+.btn-science {
+  top: 88%;
+  /* ← 縦位置 */
+  left: 78%;
+  /* ← 横位置 */
+  background: #0288d1;
+  /* ← ボタン背景色（青） */
+  color: white;
+  border: 3px solid #01579b;
+  box-shadow: 0 4px 0 #01579b;
+  animation: pulse-science 2s infinite;
+}
+
+.btn-science:hover {
+  background: #22b2ff;
+  animation: shake-math 0.2s infinite;
+}
+
+/* ▼ 算数ボタン */
+.btn-math {
+  top: 88%;
+  /* ← 縦位置 */
+  left: 22%;
+  /* ← 横位置 */
+  background: #388e3c;
+  /* ← ボタン背景色（緑） */
+  color: white;
+  border: 3px solid #0f4612;
+  box-shadow: 4px 4px 0 #0f4612;
+  animation: dot-jump 2s steps(6) infinite;
+}
+
+
+.btn-math:hover {
+  background: #66bb6a;
+  animation: shake-math 0.2s infinite;
+}
+
+
+/* クリア状態のボタン */
+.map-btn.cleared {
+  filter: grayscale(1) brightness(0.5) !important;
+  animation: none !important;
+  cursor: default;
+  pointer-events: none;
+  box-shadow: 2px 2px 0 #000 !important;
+}
+
+/* 総合ボタン (Abyss Eye) */
+.btn-all {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  height: 75px;
+  border-radius: 50% / 50%;
+  background: #000;
+  color: #e0e8f0;
+  border: 3px solid #000033;
+  box-shadow: 0 0 15px #00ffff, 0 0 30px #00008b, 0 0 55px rgba(0, 0, 139, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Courier New', monospace;
+  font-weight: bold;
+  font-size: 1.1rem;
+  letter-spacing: 3px;
+  text-shadow: 0 0 15px #00ffff;
+  cursor: pointer;
+  z-index: 1000;
+  animation: abyss-eye-purple-pulse 4s infinite;
+  transition: all 0.4s ease;
+}
+
+/* ==========================================
+   5. マップ上の敵キャラ演出
+   ========================================== */
+
+/* ▼ マップ上の敵キャラクター画像共通スタイル
+   width で画像サイズを変更できる */
+.map-monster {
+  position: absolute;
+  z-index: 95;
+  width: 160px;
+  height: auto;
+  pointer-events: none;
+  image-rendering: pixelated;
+  transition: all 0.5s ease;
+}
+
+/* ▼ 各教科ボスのマップ上の初期位置
+   top / left でマップ画像に対する相対位置を調整（単位は %）
+   ボタン位置（.btn-〇〇）と対応させるとボスがボタン近くに表示される */
+
+/* 通常敵の初期位置 */
+.monster-japanese {
+  top: 48%;
+  /* ← 縦位置 */
+  left: 26%;
+  /* ← 横位置 */
+}
+
+.monster-social {
+  top: 48%;
+  left: 60%;
+}
+
+.monster-science {
+  top: 77%;
+  left: 60%;
+}
+
+.monster-math {
+  top: 77%;
+  left: 26%;
+}
+
+/* ▼ 隠しボス（Dr.Freeze）の位置・オーラ設定
+   ★ 位置を変えたい場合は top / left を調整
+   ★ filter の色（#a020f0 = 紫）を変えると光り方が変わる */
+/* ★隠しボスの位置調整エリア★ */
+/* 隠しボスの設定 */
+.monster-apply {
+  position: absolute;
+  top: 31%;
+  left: 46%;
+  transform: translateX(-50%);
+  width: 140px;
+  z-index: 1001 !important;
+  pointer-events: none;
+
+  /* --- 紫の禍々しいオーラ --- */
+  filter: drop-shadow(0 0 10px #a020f0) drop-shadow(0 0 20px #6a0dad);
+
+  /* --- 浮遊・鼓動アニメーション --- */
+  animation: boss-aura 3s infinite ease-in-out;
+}
+
+@keyframes boss-aura {
+  0% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    filter: drop-shadow(0 0 10px #a020f0) drop-shadow(0 0 20px #6a0dad);
+  }
+
+  50% {
+    transform: translateX(-50%) translateY(-10px) scale(1.05);
+    /* 途中で光を強くする */
+    filter: drop-shadow(0 0 20px #d8b4fe) drop-shadow(0 0 40px #a020f0);
+  }
+
+  100% {
+    transform: translateX(-50%) translateY(0) scale(1);
+    filter: drop-shadow(0 0 10px #a020f0) drop-shadow(0 0 20px #6a0dad);
+  }
+}
+
+/* 優先順位負けを防ぐため、hiddenがついていない時を明示 */
+#monster-img-apply:not(.hidden) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* 生きている時のふわふわ */
+.map-monster:not(.cleared) {
+  animation: monster-float 3s ease-in-out infinite;
+}
+
+/* クリア（倒れた）状態 */
+.map-monster.cleared {
+  animation: none !important;
+  filter: grayscale(0.5) brightness(0.7);
+  transform: scale(0.9) translateY(15px);
+  opacity: 0.8;
+  z-index: 90;
+}
+
+/* ▼ 各教科クリア後にマップ上で表示される「倒れたボス」画像
+   画像を差し替える場合は url() のパスを変更 */
+
+/* 個別の負け画像差し替え */
+#monster-img-japanese.cleared {
+  content: url('img/monster/japanese_lose02.png');
+}
+
+#monster-img-social.cleared {
+  content: url('img/monster/social_lose02.png');
+}
+
+#monster-img-science.cleared {
+  content: url('img/monster/science_lose02.png');
+}
+
+#monster-img-math.cleared {
+  content: url('img/monster/math_lose02.png');
+}
+
+/* 隠しボスの負け画像 */
+#monster-img-apply.cleared {
+  content: url('img/monster/apply_lose02.png');
+}
+
+/* ==========================================
+   6. アニメーション定義
+   ▼ 各キーフレームはアニメーション演出の動きを定義しています
+   ▼ 基本的に触らないことを推奨。変えると演出の動きが変わります
+   ========================================== */
+@keyframes monster-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes float-japanese {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+
+  50% {
+    transform: translate(-50%, -60%);
+  }
+}
+
+@keyframes dot-jump {
+
+  0%,
+  40%,
+  100% {
+    transform: translate(-50%, -50%);
+  }
+
+  10%,
+  30% {
+    transform: translate(-50%, -60%);
+  }
+
+  20% {
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes pulse-science {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow: 0 0 15px #0288d1;
+  }
+}
+
+@keyframes pulse-japanese {
+
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow: 0 0 15px #ff5e5e;
+  }
+}
+
+@keyframes shake-math {
+  0% {
+    transform: translate(-51%, -49%);
+  }
+
+  50% {
+    transform: translate(-49%, -51%);
+  }
+
+  100% {
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes abyss-eye-purple-pulse {
+
+  0%,
+  100% {
+    transform: translateX(-50%) scale(1);
+    border-radius: 50%;
+  }
+
+  50% {
+    transform: translateX(-50%) scale(1.08);
+    border-radius: 48% 52% / 52% 48%;
+    box-shadow: 0 0 30px #00ffff, 0 0 60px #00008b;
+  }
+}
+
+/* ==========================================
+   7. その他システムUI
+   ▼ 正誤フィードバックモーダルや隠しボス表示など
+   ▼ 基本的に触らないことを推奨
+   ========================================== */
+#feedback-area {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.80);
+  padding: 25px;
+  border: 4px solid #fff;
+  border-radius: 15px;
+  text-align: center;
+  z-index: 2000;
+  width: 85%;
+  max-width: 350px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* クイズ画面のレイアウト（見切れ防止・決定版） */
+#page-quiz .battle-arena {
+  flex: 0 0 auto;
+  max-height: 45vh;
+  /* 拡大時にアリーナが画面を占有しすぎない */
+}
+
+/* スクロールしても問題文潰れないようにしました。 */
+/* ゲームUI全体 */
+#page-quiz .game-ui {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 横幅を中央揃え */
+  justify-content: flex-start;
+  gap: 8px;
+  /* 要素間の余白 */
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+/* 漢字・問題文ウィンドウ */
+#page-quiz .kanji-window {
+  flex-shrink: 0;
+  /* 縮まない */
+  min-height: 60px;
+  /* 最低限の高さ */
+  max-height: 34vh;
+  /* 画面の高さの25%まで */
+  width: 100%;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  background: #fff;
+  /* 任意：背景色 */
+}
+
+/* 選択肢コンテナ */
+#page-quiz #option-container {
+  max-height: 40vh;
+  /* 選択肢が多くてもスクロール可能 */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+#page-quiz .problem-window {
+  min-height: 40px;
+  margin-bottom: 9px;
+  padding: 2px;
+}
+
+/* 降参ボタン（btn-quit）の親要素がある場合、これで見切れを防ぐ */
+#page-quiz .command-grid {
+  margin-bottom: 5px;
+}
+
+/* 降参ボタンが見えるように調整 */
+.btn-quit-container {
+  margin-top: auto;
+  /* 一番下に配置 */
+  padding-bottom: 10px;
+}
+
+/* これをCSSのかなり下の方（.hidden定義の後など）に配置してください */
+#monster-img-apply:not(.hidden) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 999 !important;
+  /* 他のボタンより確実に手前に出す */
+}
+
+/* --- CSSの最後に配置 --- */
+
+/* 隠しボスがhiddenじゃない時の強制表示設定（最強設定） */
+#monster-img-apply:not(.hidden) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  /* z-indexを2000に引き上げ、総合ボタン(1000)やマップボタン(100)より手前に */
+  z-index: 2000 !important;
+  pointer-events: auto !important;
+  /* クリックできるようにする */
+}
+
+/* 念のため、親要素(monster-apply)も手前に来るように調整 */
+.monster-apply {
+  z-index: 1999 !important;
+}
+
+/* ==========================================
+   隠しボス出現用の強制上書き設定
+   ========================================== */
+
+/* JSでhiddenが外れた瞬間に、絶対に表示させる */
+#monster-img-apply:not(.hidden) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 999 !important;
+}
+
+#btn-all:not(.hidden) {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 1000 !important;
+}
+
+/* もし画像自体が読み込めていない場合に備え、最低限のサイズを確保 */
+.monster-apply {
+  min-width: 100px;
+  min-height: 100px;
+}
+
+/* 電光掲示板の外枠 */
+/* 電光掲示板：位置を固定して枠内に収める */
+.marquee-bar {
+  position: absolute;
+  top: 240px;
+  /* 位置は適宜調整してください */
+
+  /* 幅を少し短くし、中央に寄せる設定 */
+  width: 100%;
+  /* 100%から少し減らして短くする */
+  max-width: 823px;
+  /* マップ画像の最大幅を超えないように制限（必要に応じて調整） */
+  left: 50%;
+  transform: translateX(-50%);
+
+  /* 見た目の装飾 */
+  background: #413e1c94;
+  border: 2px 0px solid #fff;
+  /* 上下だけでなく全体を囲むと「窓」っぽくなります */
+  overflow: hidden;
+  padding: 4px 0;
+  z-index: 2000;
+  box-sizing: border-box;
+}
+
+.marquee-inner {
+  display: flex;
+  white-space: nowrap;
+  width: max-content;
+  animation: marquee-scroll 14s linear infinite;
+}
+
+/* ==========================================
+   Dr.Freeze 登場演出
+   ========================================== */
+#boss-intro-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9000;
+  pointer-events: all;
+}
+
+#boss-intro-overlay.hidden {
+  display: none;
+}
+
+/* 氷エフェクト用キャンバス */
+#ice-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ドラクエ風メッセージウィンドウ */
+#boss-intro-message {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88%;
+  max-width: 460px;
+  background: rgba(0, 0, 30, 0.92);
+  border: 3px solid #88ddff;
+  border-radius: 8px;
+  padding: 18px 22px;
+  z-index: 9100;
+  box-shadow: 0 0 20px rgba(100, 200, 255, 0.5), inset 0 0 10px rgba(0, 100, 200, 0.2);
+}
+
+#boss-intro-text {
+  color: #ffffff;
+  font-size: 1.05rem;
+  text-align: center;
+  line-height: 1.8;
+  margin: 0;
+  min-height: 2.5em;
+  letter-spacing: 0.05em;
+}
+
+/* ボス全画面表示 */
+#boss-fullscreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  z-index: 9200;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+#boss-fullscreen:not(.hidden) {
+  display: flex;
+}
+
+#boss-fullscreen.visible {
+  opacity: 1;
+}
+
+#boss-intro-img {
+  max-width: 85%;
+  max-height: 85%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 0 40px rgba(100, 200, 255, 0.8));
+  animation: boss-pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes boss-pulse {
+  from {
+    filter: drop-shadow(0 0 30px rgba(100, 200, 255, 0.6));
+    transform: scale(1);
+  }
+
+  to {
+    filter: drop-shadow(0 0 60px rgba(100, 200, 255, 1.0));
+    transform: scale(1.03);
+  }
+}
+
+/* 暗転用 */
+#boss-blackout {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 9300;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+}
+
+#boss-blackout:not(.hidden) {
+  display: block;
+}
+
+#boss-blackout.visible {
+  opacity: 1;
+}
+
+/* ==========================================
+   エンディング画面
+   ========================================== */
+#ending-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  z-index: 19000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#ending-overlay.hidden {
+  display: none;
+}
+
+/* ① ボス撃破メッセージ */
+#ending-boss-msg {
+  position: absolute;
+  text-align: center;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 88%;
+  max-width: 460px;
+  background: rgba(0, 0, 30, 0.95);
+  border: 3px solid #88ddff;
+  border-radius: 8px;
+  padding: 20px 24px;
+  z-index: 100;
+  box-shadow: 0 0 20px rgba(100, 200, 255, 0.4);
+}
+
+#ending-boss-text {
+  color: #fff;
+  font-size: 1.1rem;
+  line-height: 1.9;
+  margin: 0;
+  min-height: 2.5em;
+}
+
+/* ② クレジット */
+#ending-credits {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 1s ease;
+  z-index: 200;
+}
+
+#ending-credits:not(.hidden) {
+  display: flex;
+}
+
+#ending-credits.visible {
+  opacity: 1;
+}
+
+.credit-logo img {
+  width: 180px;
+  image-rendering: pixelated;
+  margin-bottom: 4px;
+}
+
+.credit-ver {
+  font-size: 2rem;
+  color: #aaa;
+  margin-bottom: 2px;
+}
+
+.credit-studio {
+  font-size: 0.9rem;
+  color: #888;
+  margin-bottom: 28px;
+  letter-spacing: 0.15em;
+}
+
+.credit-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.credit-item {
+  text-align: center;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.credit-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ▼ クレジットの役割名（小さい文字）と氏名（大きい文字）のスタイル
+   font-size / color を変えると表示が変わる */
+
+.credit-role {
+  display: block;
+  font-size: 0.75rem;
+  /* ← 役割名の文字サイズ */
+  color: #888;
+  /* ← 役割名の色 */
+  letter-spacing: 0.1em;
+  margin-bottom: 4px;
+}
+
+.credit-name {
+  display: block;
+  font-size: 1.3rem;
+  /* ← 氏名の文字サイズ */
+  color: #fff;
+  /* ← 氏名の色 */
+  letter-spacing: 0.1em;
+}
+
+/* ③ フィナーレ */
+#ending-finale {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  z-index: 300;
+}
+
+#ending-finale:not(.hidden) {
+  display: flex;
+}
+
+#finale-logo {
+  width: 600px;
+  image-rendering: pixelated;
+  opacity: 0;
+  transition: opacity 1.5s ease;
+}
+
+#finale-logo.visible {
+  opacity: 1;
+}
+
+/* ▼ フィナーレの「おしまい」テキストスタイル
+   font-size / letter-spacing で見た目を調整できる */
+#finale-text {
+  font-size: 1.4rem;
+  /* ← 文字サイズ */
+  color: #fff;
+  opacity: 0;
+  transition: opacity 1.2s ease;
+  margin: 0;
+  letter-spacing: 0.2em;
+  /* ← 文字間隔 */
+}
+
+#finale-text.visible {
+  opacity: 1;
+}
+
+#finale-btn {
+  opacity: 0;
+  transition: opacity 1s ease;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid #88ddff;
+  color: #fff;
+  font-family: 'DotGothic16', sans-serif;
+  font-size: 1rem;
+  padding: 12px 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}
+
+#finale-btn:not(.hidden) {
+  display: block;
+}
+
+#finale-btn.visible {
+  opacity: 1;
+}
+
+#finale-btn:hover {
+  background: rgba(100, 200, 255, 0.2);
+}
+
+
+/* ==========================================
+   メニュー画面：マップ上プレイヤーキャラ
+   ========================================== */
+
+/* ▼ マップキャラクター共通スタイル
+   height でキャラサイズを統一。変えると全キャラのサイズが変わる */
+.map-chara {
+  position: absolute;
+  z-index: 96;
+  width: auto;
+  height: 80px;
+  /* height固定で全キャラサイズ統一 */
+  image-rendering: pixelated;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+
+/* ▼ 各キャラクターのマップ上の位置
+   top / left で位置を調整（単位は %）
+   transform: translate(-50%, -50%) はキャラの中心を基準にするための設定（変更不要） */
+
+/* 十字形配置（上：shunsuke、左：zen、右：gigi、下：hikari） */
+.chara-shunsuke {
+  top: 62%;
+  left: 51%;
+  transform: translate(-50%, -50%);
+}
+
+.chara-zen {
+  top: 65%;
+  left: 45%;
+  transform: translate(-50%, -50%);
+}
+
+.chara-gigi {
+  top: 65%;
+  left: 56%;
+  transform: translate(-50%, -50%);
+}
+
+.chara-hikari {
+  top: 70%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* ==========================================
+   クイズ画面：解答選択肢ボタン
+   ========================================== */
+.option-btn {
+  font-family: 'DotGothic16', sans-serif;
+  font-size: 1rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.75);
+  border: 2px solid #aaa;
+  border-radius: 8px;
+  padding: 3px 8px;
+  cursor: pointer;
+  text-align: center;
+  line-height: 1.4;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.option-btn:hover:not(:disabled) {
+  background: rgba(0, 200, 255, 0.25);
+  border-color: #00fbff;
+  box-shadow: 0 0 12px rgba(0, 251, 255, 0.6);
+  transform: scale(1.04);
+}
+
+.option-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  background: rgba(0, 200, 255, 0.4);
+}
+
+.option-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* 降参ボタン */
+.command-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  /* 例: 2列に */
+  gap: 10px;
+}
+
+/* ▼ 降参ボタン（赤い「降参してメニューに戻る」ボタン）
+   background で背景色、font-size で文字サイズを変更できる */
+.exit-btn {
+  grid-column: 1 / -1;
+  margin-top: 10px;
+  background: #c72c2c;
+  /* ← 降参ボタンの色（赤） */
+  color: white;
+  font-size: 14px;
+}
+
+/* エンディング：ラスボスやられ画像 */
+#ending-boss-img {
+  display: block;
+  width: 220px;
+  height: auto;
+  image-rendering: pixelated;
+  margin: 0 auto 20px;
+  filter: drop-shadow(0 0 20px rgba(100, 200, 255, 0.6));
+}
+
+/* ==========================================
+   レスポンシブ：問題文はみ出し対策
+   ========================================== */
+#question-text {
+  margin: 0;
+  font-size: clamp(0.75rem, 2.5vw, 1rem);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.6;
+}
+
+.kanji-window.image-mode {
+  width: 90%;
+  max-width: 456px;
+  box-sizing: border-box;
+}

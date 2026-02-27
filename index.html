@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- ▼ ブラウザのタブに表示されるタイトル。変更する場合はここを編集 -->
+  <title>TENSAIゼミ - BATTLE QUIZ</title>
+  <!-- ▼ フォント読み込み（DotGothic16 = レトロなドット文字フォント）。変更不要 -->
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+  <!-- ▼ スタイルシート（見た目の設定ファイル）。ファイル名を変えた場合はここも変更 -->
+  <link rel="stylesheet" href="style.css">
+  <!-- ▼ ゲームのプログラムファイル。ファイル名を変えた場合はここも変更 -->
+  <script src="app.js" defer></script>
+</head>
+
+<!-- ▼ body の class はゲームの状態に応じて JS が自動で切り替えるため、直接編集しない -->
+<body class="menu-mode">
+
+  <!-- ========================================================
+       ■ イントロ演出エリア
+       ゲーム起動時に最初に表示されるオープニング画面。
+       画像を差し替える場合は src="img/stage/〇〇" の部分を変更。
+  ======================================================== -->
+  <div id="intro-sequence">
+    <!-- チームロゴ画面（最初に表示） -->
+    <div id="intro-team-logo" class="intro-screen">
+      <img src="img/stage/team_logo_w.png" alt="チームロゴ">
+    </div>
+    <!-- オープニングアニメ背景（GIF）画面 -->
+    <div id="intro-gif-bg" class="intro-screen">
+      <img src="img/stage/op_anime_bg.gif" alt="背景アニメ">
+    </div>
+  </div>
+
+  <!-- ========================================================
+       ■ タイトルロゴ（スプラッシュ画面）
+       オープニング後に表示されるタイトル画像。
+       画像を差し替える場合は src="img/stage/top.png" を変更。
+  ======================================================== -->
+  <div class="splash-content">
+    <img src="img/stage/top.png" alt="タイトルロゴ" class="title-logo">
+  </div>
+
+  <!-- ========================================================
+       ■ ゲーム全体のコンテナ
+       メニュー画面・クイズ画面・各種オーバーレイはここに格納。
+  ======================================================== -->
+  <div class="game-container">
+
+    <!-- ======================================================
+         ■ メニュー画面（教科選択マップ）
+         id="page-menu" は JS から表示切替に使用。変更しない。
+    ====================================================== -->
+    <section id="page-menu" class="page">
+      <div class="menu-visual">
+
+        <!-- ▼ マップ背景画像。差し替える場合は src を変更 -->
+        <img src="img/stage/main.jpg" alt="メインビジュアル" id="menu-main-img">
+
+        <!-- ======================================================
+             ■ 左カルーセル（敵キャラクターのスライド表示）
+             教科の追加・削除に合わせて <img> を増減する。
+             ※ 最初と同じ画像を末尾にも1枚追加するとループがスムーズになる。
+        ====================================================== -->
+        <div class="carousel-box" id="monster-carousel">
+          <div class="carousel-track" id="monster-track">
+            <img src="img/monster/japanese_idle.png" alt="国語ボス">
+            <img src="img/monster/social_idle.png" alt="社会ボス">
+            <img src="img/monster/science_idle.png" alt="理科ボス">
+            <img src="img/monster/math_idle.png" alt="算数ボス">
+            <!-- ▼ ループ用に先頭と同じ画像を末尾に追加（削除しない） -->
+            <img src="img/monster/japanese_idle.png">
+          </div>
+        </div>
+
+        <!-- ======================================================
+             ■ 右カルーセル（プレイヤーキャラクターのスライド表示）
+             キャラクターの追加・削除に合わせて <img> を増減する。
+             ※ 最初と同じ画像を末尾にも1枚追加するとループがスムーズになる。
+        ====================================================== -->
+        <div class="carousel-box" id="player-carousel">
+          <div class="carousel-track" id="player-track">
+            <img src="img/character/shunsuke_idle01.png" alt="キャラ1">
+            <img src="img/character/zen_idle01.png" alt="キャラ2">
+            <img src="img/character/gigi_idle01.png" alt="キャラ3">
+            <img src="img/character/hikari_idle01.png" alt="キャラ4">
+            <!-- ▼ ループ用に先頭と同じ画像を末尾に追加（削除しない） -->
+            <img src="img/character/shunsuke_idle01.png">
+          </div>
+        </div>
+
+        <!-- ======================================================
+             ■ 電光掲示板（マーキーテキスト）
+             流れるテキストを変更したい場合は <span> 内の文字を編集。
+             ※ 2つの <span> に同じ文を入れることでシームレスにループする。
+                両方を同じ内容にすること。
+        ====================================================== -->
+        <div class="marquee-bar">
+          <div class="marquee-inner">
+            <span>・・すきな教科ステージをえらんでボスをたおそう！Let's BATTLE！・・・　</span>
+            <span>すきな教科ステージをえらんでボスをたおそうLet's BATTLE！・・・</span>
+          </div>
+        </div>
+
+        <!-- ======================================================
+             ■ マップ上の敵キャラクター画像
+             各教科のボス画像。差し替える場合は src を変更。
+             id・class は JS や CSS が参照するため変更しない。
+        ====================================================== -->
+        <img src="img/monster/japanese_idle.png" class="map-monster monster-japanese" id="monster-img-japanese">
+        <img src="img/monster/social_idle.png" class="map-monster monster-social" id="monster-img-social">
+        <img src="img/monster/science_idle.png" class="map-monster monster-science" id="monster-img-science">
+        <img src="img/monster/math_idle.png" class="map-monster monster-math" id="monster-img-math">
+        <!-- ▼ 総合ボス（Dr.Freeze）。全教科クリア後に表示。通常は hidden のまま -->
+        <img src="img/monster/apply_idle.png" class="map-monster monster-apply hidden" id="monster-img-apply">
+
+        <!-- ======================================================
+             ■ 教科選択ボタン（マップ上のクリックエリア）
+             ボタンのラベル文字を変更したい場合は <button>〇〇</button> の文字を編集。
+             onclick="startQuiz('〇〇')" の引数は問題データの教科キーと一致させること。
+               japanese = 国語 / social = 社会 / science = 理科 / math = 算数
+        ====================================================== -->
+        <button class="map-btn btn-japanese" onclick="startQuiz('japanese')">国語</button>
+        <button class="map-btn btn-social" onclick="startQuiz('social')">社会</button>
+        <button class="map-btn btn-science" onclick="startQuiz('science')">理科</button>
+        <button class="map-btn btn-math" onclick="startQuiz('math')">算数</button>
+        <!-- ▼ 総合ボタンは現在非表示（削除済み）。復活させる場合は上記に倣って追加 -->
+
+        <!-- ======================================================
+             ■ マップ上のプレイヤーキャラクター画像（4人）
+             差し替える場合は src を変更。
+             id・class は JS や CSS が参照するため変更しない。
+        ====================================================== -->
+        <img src="img/character/shunsuke_idle01.png" class="map-chara chara-shunsuke" id="map-chara-shunsuke">
+        <img src="img/character/zen_idle01.png" class="map-chara chara-zen" id="map-chara-zen">
+        <img src="img/character/gigi_idle01.png" class="map-chara chara-gigi" id="map-chara-gigi">
+        <img src="img/character/hikari_idle01.png" class="map-chara chara-hikari" id="map-chara-hikari">
+
+      </div>
+    </section><!-- / #page-menu -->
+
+    <!-- ======================================================
+         ■ クイズ（バトル）画面
+         id="page-quiz" は JS から表示切替に使用。変更しない。
+         内部の要素はほぼ JS が動的に書き換えるため、直接テキスト編集は不要。
+    ====================================================== -->
+    <section id="page-quiz" class="page hidden">
+      <div class="battle-arena">
+        <div class="sprites-row">
+          <!-- ▼ 敵キャラクターのスプライト表示エリア（JS が画像を差し込む） -->
+          <div id="monster-sprite" class="character-sprite monster"><img></div>
+          <!-- ▼ 通常ステージ用プレイヤー表示（1人）。JS が制御 -->
+          <div id="player-sprite" class="character-sprite player"><img></div>
+          <!-- ▼ 最終ボス戦用プレイヤー表示（4人全員）。JS が hidden を外して表示 -->
+          <div id="player-party" class="player-party hidden">
+            <div class="party-sprite" id="party-shunsuke"><img src="img/character/shunsuke_idle01.png"></div>
+            <div class="party-sprite" id="party-zen"><img src="img/character/zen_idle01.png"></div>
+            <div class="party-sprite" id="party-gigi"><img src="img/character/gigi_idle01.png"></div>
+            <div class="party-sprite" id="party-hikari"><img src="img/character/hikari_idle01.png"></div>
+          </div>
+        </div>
+
+        <!-- ▼ クイズ画面上部に表示される教科名ラベル（JS が自動で書き換え）→ app.js 693行目付近参照 -->
+        <div id="quiz-subject-display"></div>
+
+        <!-- ▼ HPゲージと問題番号表示エリア（JS が自動で書き換え） -->
+        <div class="status-container">
+          <div class="hp-gauge-container">
+            <div class="hp-background">
+              <div id="monster-hp"></div><!-- 敵のHP -->
+            </div>
+            <div class="hp-background">
+              <div id="player-hp"></div><!-- プレイヤーのHP -->
+            </div>
+          </div>
+          <div id="quiz-progress"></div><!-- 「問題 1/5」などの進捗 -->
+        </div>
+      </div>
+
+      <!-- ======================================================
+           ■ ゲームUI（問題文・選択肢・降参ボタン）
+           問題文や選択肢は JS が動的に生成するため、ここでは編集不要。
+           「降参してメニューに戻る」のラベルを変えたい場合のみ下記を編集。
+      ====================================================== -->
+      <div class="game-ui">
+        <!-- ▼ 漢字・大きなキーワード表示エリア（JS が書き換え） -->
+        <div class="kanji-window">
+          <div id="main-kanji"></div>
+        </div>
+        <!-- ▼ 問題文表示エリア（JS が書き換え） -->
+        <div class="problem-window">
+          <p id="question-text">準備中...</p>
+        </div>
+        <!-- ▼ 選択肢ボタン＋降参ボタンのグリッド -->
+        <div class="command-grid">
+          <!-- 選択肢ボタンは JS が動的に生成して挿入する -->
+          <div id="option-container" style="display: contents;"></div>
+          <!-- ▼ 降参ボタン。ラベル変更はここを編集 -->
+          <button class="option-btn exit-btn" onclick="askQuit()">
+            ◀ 降参してメニューに戻る
+          </button>
+        </div>
+      </div>
+    </section><!-- / #page-quiz -->
+
+    <!-- ======================================================
+         ■ Dr.Freeze（最終ボス）登場演出オーバーレイ
+         全教科クリア後に自動で表示される演出画面。
+         ボステキストは JS 側で設定するため、ここでは編集不要。
+         ボス画像を差し替える場合は src="img/monster/apply_idle.png" を変更。
+    ====================================================== -->
+    <div id="boss-intro-overlay" class="hidden">
+      <canvas id="ice-canvas"></canvas><!-- 氷エフェクト描画用キャンバス（JS制御） -->
+      <div id="boss-intro-message">
+        <p id="boss-intro-text"></p><!-- JS がセリフを挿入 -->
+      </div>
+      <div id="boss-fullscreen" class="hidden">
+        <img src="img/monster/apply_idle.png" id="boss-intro-img" alt="Dr.Freeze">
+      </div>
+      <div id="boss-blackout" class="hidden"></div><!-- 暗転エフェクト用 -->
+    </div>
+
+    <!-- ======================================================
+         ■ エンディング画面
+         最終ボスを倒した後に表示される3段階のエンディング演出。
+         ① ボス撃破メッセージ → ② スタッフクレジット → ③ フィナーレ
+    ====================================================== -->
+    <div id="ending-overlay" class="hidden">
+
+      <!-- ① ボス撃破メッセージ -->
+      <!-- ▼ ボスのやられ画像。差し替える場合は src を変更 -->
+      <div id="ending-boss-msg">
+        <img src="img/monster/apply_lose02.png" id="ending-boss-img" alt="Dr.Freeze やられ">
+        <p id="ending-boss-text"></p><!-- テキストは JS が挿入 -->
+      </div>
+
+      <!-- ② スタッフクレジット -->
+      <!-- ▼ クレジットのメンバー情報を変更する場合はここを編集。
+              data-delay はフェードインのタイミング（ミリ秒）。
+              追加する場合は <div class="credit-item" data-delay="〇〇"> を増やす。 -->
+      <div id="ending-credits" class="hidden">
+        <div class="credit-logo">
+          <img src="img/stage/team_logo_w.png" alt="チームロゴ">
+        </div>
+        <div class="credit-list">
+          <div class="credit-item" data-delay="0">
+            <span class="credit-role">伝説のデザイン職人</span><!-- 役割 -->
+            <span class="credit-name">KEITA IMAI</span><!-- 氏名 -->
+          </div>
+          <div class="credit-item" data-delay="400">
+            <span class="credit-role">幻惑の演出使い</span>
+            <span class="credit-name">RYU KOBAYASHI</span>
+          </div>
+          <div class="credit-item" data-delay="800">
+            <span class="credit-role">世界を整えし者</span>
+            <span class="credit-name">S G M</span>
+          </div>
+          <div class="credit-item" data-delay="1200">
+            <span class="credit-role">叡智の賢者</span>
+            <span class="credit-name">A T</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ③ フィナーレ（タイトルロゴ＋「もう一度あそぶ」ボタン） -->
+      <!-- ▼ フィナーレのロゴ画像を変える場合は src を変更 -->
+      <div id="ending-finale" class="hidden">
+        <img src="img/stage/top.png" alt="TENSAIロゴ" id="finale-logo">
+        <!-- ▼ 「おしまい」の文言を変えたい場合はここを編集 -->
+        <p id="finale-text">おしまい</p>
+        <!-- ▼「もう一度あそぶ」ボタンのラベルを変えたい場合はここを編集 -->
+        <button id="finale-btn" class="hidden" onclick="restartFromOpening()">もう一度はじめからあそぶ</button>
+      </div>
+
+    </div><!-- / #ending-overlay -->
+
+    <!-- ======================================================
+         ■ 正誤フィードバックモーダル
+         問題に答えるたびに表示される「正解/不正解」の結果画面。
+         表示テキストや点数は JS が自動で書き換えるため、直接編集不要。
+         「次の問題へ」「メニューへ戻る」のラベルだけ変更可。
+    ====================================================== -->
+    <div id="feedback-area" class="modal-overlay hidden">
+      <div class="scroll-inner">
+        <h2 id="feedback-title">判定</h2><!-- 「正解！」「不正解」などを JS が挿入 -->
+        <p id="feedback-text"></p><!-- 解説文を JS が挿入 -->
+        <!-- ▼ 最終問題後のスコア表示エリア（通常は非表示）-->
+        <div id="result-score-area" class="hidden">SCORE: <span id="final-score">0</span></div>
+        <!-- ▼ ボタンのラベル変更はここを編集 -->
+        <button id="btn-next" class="next-button" onclick="nextQuestion()">次の問題へ</button>
+        <button id="btn-retry" class="next-button hidden" onclick="backToMenu()">メニューへ戻る</button>
+      </div>
+    </div>
+
+  </div><!-- / .game-container -->
+
+</body>
+</html>
